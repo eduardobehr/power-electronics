@@ -1,0 +1,30 @@
+.title DC-DC Buck Converter
+SW1 /Vin /Vsw /pwm GND switchModel ON
+Vpwm /pwm GND pulse(0 10 1u 1u 1u 80u 100u)
+R1 /Vout GND 5
+C1 /Vout GND 47u
+D1 GND /Vsw DIODE
+L1 /Vsw /Vout 2m
+V1 /Vin GND dc(48)
+.save @vpwm[i]
+.save @r1[i]
+.save @l1[i]
+.save @v1[i]
+.save V(/Vin)
+.save V(/Vout)
+.save V(/Vsw)
+.save V(/pwm)
+
+.model switchModel sw vt=1 vh=0.2 ron=10m roff=1Meg
+.tran 1u 20m
+
+.control
+    run
+    * plot V("/Vout")
+    hardcopy Vout.eps "/Vout"
+    wrdata Vout.csv "/Vout"
+    shell './plot_csv.py Vout.csv'
+.endc
+
+.end
+
