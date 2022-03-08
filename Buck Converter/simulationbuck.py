@@ -60,13 +60,6 @@ class SimulationBuck:
         
         pass
     
-    #def integral(self, y: np.ndarray, x: np.ndarray, i: int):
-        #"""
-        #y: ndarray or list
-        #x: ndarray or list
-        #i: index
-        #"""
-        #assert y.size == x.size and 0 < index < x.size
     
     def rms(self, signal: np.ndarray):
         """ Returns the Root Mean Squared of a signal """
