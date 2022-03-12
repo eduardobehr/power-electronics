@@ -12,6 +12,8 @@ class FlybackSimulation:
         self.filename_circuit = filename_circuit
         self.filename_csv = filename_csv
         self.netlist_generated = False
+        self.df: pd.DataFrame = None
+        self.waveforms = ["t", "Vds", "Vout", "Ip", "Is"]
         pass
 
     def _fix_ngspice_csv(self, filename):
@@ -111,9 +113,11 @@ class FlybackSimulation:
             *plot v(nOut, sgnd)
             *plot Lp#branch Ls#branch    xlimit {_endtime-4*_Ts} {_endtime} 
             *plot drain                  xlimit {_endtime-4*_Ts} {_endtime} 
-            wrdata {self.filename_csv} drain                  xlimit {_endtime-4*_Ts} {_endtime}
+            set wr_singlescale
+            wrdata {self.filename_csv} drain v(nOut, sgnd) Lp#branch Ls#branch
             echo Simulation done
             #iplot drain
+            display
             exit 
         .endc
         """
@@ -134,12 +138,22 @@ class FlybackSimulation:
         print("Calling Ngspice for generated netlist...\n")
         print(sp.getoutput("ngspice --version"))
         sp.getoutput(f"ngspice {self.filename_circuit}")
+        print(f'Available waveforms: {self.waveforms}')
 
-    def plot(self, *args, **kwargs):
+    def read_outputs(self):
+        """
+        Reads the generated csv outputs (";" separated)
+        """
         self._fix_ngspice_csv(self.filename_csv)
-        df = pd.read_csv(self.filename_csv, sep=";", names=["t", "y"])
-        return plt.plot(df["t"], df["y"], *args, **kwargs)
-        # return df.plot(x="t", y="y", figsize=(10,8))#, xlim=(df.iloc[int(len(df)/2)]["t"], df.iloc[-1]["t"]))
+        self.df = pd.read_csv(self.filename_csv, sep=";", names=self.waveforms)
+
+
+    def plot(self, x="t", y=None, *args, **kwargs):
+        if y is None:
+            y=self.waveforms[1]
+        if self.df is None:
+            raise Exception("DataFrame not loaded. Call 'read_outputs' to load it.")
+        return plt.plot(self.df[x], self.df[y], *args, **kwargs)
         
   
     
@@ -147,8 +161,8 @@ class FlybackSimulation:
 if __name__ == "__main__":
     simulation = FlybackSimulation()
     simulation.generate_flyback_netlist()
+    simulation.begin()
+    simulation.read_outputs()
 
-    df = pd.read_csv("output.csv", sep=";", names=["t", "y"])
-    df.plot(x="t", y="y")
+    simulation.plot()
     plt.show()
-    print(df)
