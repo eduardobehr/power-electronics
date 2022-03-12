@@ -6,6 +6,12 @@ from matplotlib import pyplot as plt
 import warnings
 warnings.filterwarnings('ignore')
 
+class Snubber:
+    """ Parallel RC with Diode """
+    def __init__(self, C=1e-9, R=100) -> None:
+        self.C = C
+        self.R = R
+
 class FlybackSimulation:
 
     def __init__(self, filename_circuit="flyback.cir", filename_csv = "output.csv") -> None:
@@ -59,6 +65,7 @@ class FlybackSimulation:
     _RDSon=1e-3,
     _endtime=300e-6,
     _steps_per_switch_period=500,
+    _snubber: Snubber = Snubber()
     ):
         """
         Generates a Spice netlist from a template with a simple string substitution
@@ -99,8 +106,8 @@ class FlybackSimulation:
 
         * Snubber
         Dsnub       drain       snub        DMOD
-        Csnb        nP          snub        1nF
-        Rsnb        nP          snub        100
+        Csnb        nP          snub        {_snubber.C}
+        Rsnb        nP          snub        {_snubber.R}
 
         * Misc
         Rgnd        gnd         sgnd        1Meg
