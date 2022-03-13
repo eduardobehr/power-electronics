@@ -58,7 +58,9 @@ class FlybackSimulation:
     def generate_flyback_netlist(self, 
     _Vin=311,
     _Vout=12,
-    _Lp=40e-6, 
+    _D=0.1,
+    _N=10,
+    _Lm=4e-6, 
     _Rl=1, 
     _fs=160e3, 
     _Co=100e-6,
@@ -75,16 +77,17 @@ class FlybackSimulation:
         _Ts = 1/_fs
         netlist=f"""
         .title Flyback converter
-        .param _N                           = 10; Np/Ns winding ratio
-        .param _D                           = {_Vout}/({_Vin}/_N)
-        .param _Ls                          = {_Lp}/(_N**2)
+        *.param _N                           = 10; N1/N2 winding ratio
+        *.param _D                           = {_Vout}/({_Vin}/{_N})
+        .param _Lp                          = {_Lm}*{_N}
+        .param _Ls                          = {_Lm}/{_N}
 
         * Primary side
         Vin         nVin        gnd         {_Vin}
         .ic v(nVin) = {_Vin}
         Rin         nVin        nP          1m
         Cin         nP          gnd         1nF         ic={_Vin}
-        Lp          nP          drain       {_Lp}
+        Lp          nP          drain       _Lp
         S1          drain       gnd         gate            gnd         switchModel  OFF
         .model      switchModel sw          vt=0.5          ron={_RDSon}      roff=100Meg
         Cds         drain       gnd         700pF; Drain to source capacitance
@@ -99,7 +102,7 @@ class FlybackSimulation:
         Rl          nOut        sgnd        {_Rl}
 
         * PWM
-        vModulant   signal      gnd         {{_D}}
+        vModulant   signal      gnd         {_D}
         BsawtoothP  sawtoothP   gnd         v=0.5+(time*{_fs}-floor(0.5+time*{_fs}))
         Bpwm        gate        gnd         v=v(signal)>=v(sawtoothP) && v(signal)>=0 ? 1 : 0;v(signal)<=v(sawtoothN) && v(signal)<=0 ? -1 : 0
 
