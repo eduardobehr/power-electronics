@@ -19,7 +19,7 @@ class FlybackSimulation:
         self.filename_csv = filename_csv
         self.netlist_generated = False
         self.df: pd.DataFrame = None
-        self.waveforms = ["t", "Vds", "Vout", "Ip", "Is"]
+        self.waveforms = ["t", "Vds", "Vout", "Ip", "Is", "gate", "Im"]
         pass
 
     def _fix_ngspice_csv(self, filename):
@@ -65,6 +65,7 @@ class FlybackSimulation:
     _fs=160e3, 
     _Co=100e-6,
     _RDSon=1e-3,
+    _transformer_coupling=0.995,
     _endtime=300e-6,
     _steps_per_switch_period=500,
     _snubber: Snubber = Snubber()
@@ -87,15 +88,17 @@ class FlybackSimulation:
         .ic v(nVin) = {_Vin}
         Rin         nVin        nP          1m
         Cin         nP          gnd         1nF         ic={_Vin}
-        Lp          nP          drain       _Lp
+        Lstray      nP          nStray      {0};{_Lm*_N/_transformer_coupling*(1-_transformer_coupling/_N)}
+        bLp         nStray      drain       v={_N}*v(sgnd, ndiod)
+        Lm          nStray      drain       {_Lm}
         S1          drain       gnd         gate            gnd         switchModel  OFF
         .model      switchModel sw          vt=0.5          ron={_RDSon}      roff=100Meg
         Cds         drain       gnd         700pF; Drain to source capacitance
 
-        K1          Lp          Ls          0.995
+        *K1          Lp          Ls          1
 
         * Secondary side
-        Ls          sgnd        ndiod       {{_Ls}}
+        bLs          sgnd        ndiod      v=v(drain, nP)/{_N}
         D1          ndiod       nOut        DMOD
         .model DMOD D ( bv=500 is=1e-13 n=1.05)
         Co          nOut        sgnd        {_Co}
@@ -124,9 +127,9 @@ class FlybackSimulation:
             *plot Lp#branch Ls#branch    xlimit {_endtime-4*_Ts} {_endtime} 
             *plot drain                  xlimit {_endtime-4*_Ts} {_endtime} 
             set wr_singlescale
-            wrdata {self.filename_csv} drain v(nOut, sgnd) Lp#branch Ls#branch
+            wrdata {self.filename_csv} drain v(nOut, sgnd) bLp#branch bLs#branch gate lm#branch
             echo Simulation done
-            #iplot drain
+            *iplot drain
             display
             exit 
         .endc
